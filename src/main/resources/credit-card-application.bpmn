@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
+                   xmlns:tns="http://www.jboss.org/drools"
+                   id="Definition"
+                   targetNamespace="http://www.jboss.org/drools">
+  
+  <bpmn2:process id="credit-card-application" name="Credit Card Application" isExecutable="true" processType="Public">
+    
+    <!-- Process Variables -->
+    <bpmn2:property id="applicationId" itemSubjectRef="ItemDefinition_String"/>
+    <bpmn2:property id="customerId" itemSubjectRef="ItemDefinition_String"/>
+    <bpmn2:property id="cardType" itemSubjectRef="ItemDefinition_String"/>
+    <bpmn2:property id="requestedLimit" itemSubjectRef="ItemDefinition_Integer"/>
+    <bpmn2:property id="annualIncome" itemSubjectRef="ItemDefinition_Integer"/>
+    <bpmn2:property id="creditScore" itemSubjectRef="ItemDefinition_Integer"/>
+    <bpmn2:property id="approvedLimit" itemSubjectRef="ItemDefinition_Integer"/>
+    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean"/>
+    <bpmn2:property id="requiresUnderwriterReview" itemSubjectRef="ItemDefinition_Boolean"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String"/>
+    
+    <!-- Start Event -->
+    <bpmn2:startEvent id="StartEvent_1" name="Application Received">
+      <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+    
+    <!-- Credit Check -->
+    <bpmn2:scriptTask id="ScriptTask_1" name="Credit Check" scriptFormat="javascript">
+      <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+      <bpmn2:script>
+        // Simulate credit bureau check
+        // In real scenario, this would call external service
+        
+        // Credit score already provided as input
+        // Determine if manual review needed
+        var lowScore = creditScore < 650;
+        var highLimit = requestedLimit > 2000000; // Over $20,000
+        var incomeRatio = (requestedLimit / annualIncome) > 0.3;
+        
+        requiresUnderwriterReview = lowScore || highLimit || incomeRatio;
+        
+        kcontext.setVariable("requiresUnderwriterReview", requiresUnderwriterReview);
+        kcontext.setVariable("statusCode", "CREDIT_CHECKED");
+      </bpmn2:script>
+    </bpmn2:scriptTask>
+    
+    <!-- Decision Gateway -->
+    <bpmn2:exclusiveGateway id="Gateway_1" name="Needs Review?" gatewayDirection="Diverging">
+      <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    
+    <!-- Underwriter Review -->
+    <bpmn2:userTask id="UserTask_1" name="Underwriter Review">
+      <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="approved"/>
+        <bpmn2:dataOutput id="DataOutput_2" name="approvedLimit"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_1</bpmn2:dataOutputRefs>
+          <bpmn2:dataOutputRefs>DataOutput_2</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_1</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Credit Card Underwriting</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_1</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_2</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">underwriters</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_2</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_1</bpmn2:sourceRef>
+        <bpmn2:targetRef>isApproved</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_2</bpmn2:sourceRef>
+        <bpmn2:targetRef>approvedLimit</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+    
+    <!-- Auto Approval -->
+    <bpmn2:scriptTask id="ScriptTask_2" name="Auto Approve" scriptFormat="javascript">
+      <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
+      <bpmn2:script>
+        // Auto-approve based on credit score
+        isApproved = creditScore >= 700;
+        
+        if (isApproved) {
+            approvedLimit = requestedLimit;
+        } else {
+            approvedLimit = 0;
+        }
+        
+        kcontext.setVariable("isApproved", isApproved);
+        kcontext.setVariable("approvedLimit", approvedLimit);
+        kcontext.setVariable("statusCode", "AUTO_APPROVED");
+      </bpmn2:script>
+    </bpmn2:scriptTask>
+    
+    <!-- Merge Gateway -->
+    <bpmn2:exclusiveGateway id="Gateway_2" name="Merge" gatewayDirection="Converging">
+      <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+    
+    <!-- Manager Approval for High Limits -->
+    <bpmn2:userTask id="UserTask_2" name="Manager Approval">
+      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_3" name="TaskName"/>
+        <bpmn2:dataInput id="DataInput_4" name="GroupId"/>
+        <bpmn2:dataOutput id="DataOutput_3" name="finalApproval"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_3</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_4</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_3</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_3</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Final Approval</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_3</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_4</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">managers</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_4</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+    </bpmn2:userTask>
+    
+    <!-- Issue Card -->
+    <bpmn2:scriptTask id="ScriptTask_3" name="Issue Card" scriptFormat="javascript">
+      <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_9</bpmn2:outgoing>
+      <bpmn2:script>
+        // Generate application ID
+        var timestamp = java.lang.System.currentTimeMillis();
+        applicationId = "CC-" + customerId + "-" + timestamp;
+        
+        kcontext.setVariable("applicationId", applicationId);
+        kcontext.setVariable("statusCode", isApproved ? "ISSUED" : "DECLINED");
+        
+        java.lang.System.out.println("Credit card application: " + applicationId + " - " + (isApproved ? "Approved" : "Declined"));
+      </bpmn2:script>
+    </bpmn2:scriptTask>
+    
+    <!-- End Event -->
+    <bpmn2:endEvent id="EndEvent_1" name="Application Complete">
+      <bpmn2:incoming>SequenceFlow_9</bpmn2:incoming>
+    </bpmn2:endEvent>
+    
+    <!-- Sequence Flows -->
+    <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="Gateway_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_3" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresUnderwriterReview == true;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_4" name="No" sourceRef="Gateway_1" targetRef="ScriptTask_2">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresUnderwriterReview == false;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_5" sourceRef="UserTask_1" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_6" sourceRef="ScriptTask_2" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_7" sourceRef="Gateway_2" targetRef="UserTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_8" sourceRef="UserTask_2" targetRef="ScriptTask_3"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_9" sourceRef="ScriptTask_3" targetRef="EndEvent_1"/>
+    
+  </bpmn2:process>
+  
+  <!-- Item Definitions -->
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="Boolean"/>
+  
+  <!-- Diagram -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="credit-card-application">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="100" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_1" bpmnElement="ScriptTask_1">
+        <dc:Bounds x="200" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_1" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <dc:Bounds x="370" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_1" bpmnElement="UserTask_1">
+        <dc:Bounds x="345" y="50" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_2" bpmnElement="ScriptTask_2">
+        <dc:Bounds x="345" y="250" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_2" bpmnElement="Gateway_2" isMarkerVisible="true">
+        <dc:Bounds x="520" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_2" bpmnElement="UserTask_2">
+        <dc:Bounds x="640" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_3" bpmnElement="ScriptTask_3">
+        <dc:Bounds x="800" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="970" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1">
+        <di:waypoint x="136" y="168"/>
+        <di:waypoint x="200" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2">
+        <di:waypoint x="300" y="168"/>
+        <di:waypoint x="370" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_3" bpmnElement="SequenceFlow_3">
+        <di:waypoint x="395" y="143"/>
+        <di:waypoint x="395" y="130"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4">
+        <di:waypoint x="395" y="193"/>
+        <di:waypoint x="395" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5">
+        <di:waypoint x="445" y="90"/>
+        <di:waypoint x="545" y="90"/>
+        <di:waypoint x="545" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6">
+        <di:waypoint x="445" y="290"/>
+        <di:waypoint x="545" y="290"/>
+        <di:waypoint x="545" y="193"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7">
+        <di:waypoint x="570" y="168"/>
+        <di:waypoint x="640" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_8" bpmnElement="SequenceFlow_8">
+        <di:waypoint x="740" y="168"/>
+        <di:waypoint x="800" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_9" bpmnElement="SequenceFlow_9">
+        <di:waypoint x="900" y="168"/>
+        <di:waypoint x="970" y="168"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  
+</bpmn2:definitions>
+
+<!-- Made with Bob -->
