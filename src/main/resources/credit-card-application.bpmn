@@ -1,69 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" 
-                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
-                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
-                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
-                   xmlns:tns="http://www.jboss.org/drools"
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:drools="http://www.jboss.org/drools"
                    id="Definition"
                    targetNamespace="http://www.jboss.org/drools">
-  
-  <bpmn2:process id="credit-card-application" name="Credit Card Application" isExecutable="true" processType="Public">
-    
+
+  <bpmn2:process id="credit-card-application"
+                 drools:packageName="com.ibm.bamoe.demo"
+                 drools:version="1.0.0"
+                 drools:adHoc="false"
+                 name="Credit Card Application"
+                 isExecutable="true"
+                 processType="Public">
+
     <!-- Process Variables -->
-    <bpmn2:property id="applicationId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="customerId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="cardType" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="requestedLimit" itemSubjectRef="ItemDefinition_Integer"/>
-    <bpmn2:property id="annualIncome" itemSubjectRef="ItemDefinition_Integer"/>
-    <bpmn2:property id="creditScore" itemSubjectRef="ItemDefinition_Integer"/>
-    <bpmn2:property id="approvedLimit" itemSubjectRef="ItemDefinition_Integer"/>
-    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean"/>
-    <bpmn2:property id="requiresUnderwriterReview" itemSubjectRef="ItemDefinition_Boolean"/>
-    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String"/>
-    
+    <bpmn2:property id="applicationId" itemSubjectRef="ItemDefinition_String" name="applicationId"/>
+    <bpmn2:property id="customerId" itemSubjectRef="ItemDefinition_String" name="customerId"/>
+    <bpmn2:property id="cardType" itemSubjectRef="ItemDefinition_String" name="cardType"/>
+    <bpmn2:property id="requestedLimit" itemSubjectRef="ItemDefinition_Integer" name="requestedLimit"/>
+    <bpmn2:property id="annualIncome" itemSubjectRef="ItemDefinition_Integer" name="annualIncome"/>
+    <bpmn2:property id="creditScore" itemSubjectRef="ItemDefinition_Integer" name="creditScore"/>
+    <bpmn2:property id="approvedLimit" itemSubjectRef="ItemDefinition_Integer" name="approvedLimit"/>
+    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean" name="isApproved"/>
+    <bpmn2:property id="requiresUnderwriterReview" itemSubjectRef="ItemDefinition_Boolean" name="requiresUnderwriterReview"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String" name="statusCode"/>
+
     <!-- Start Event -->
     <bpmn2:startEvent id="StartEvent_1" name="Application Received">
       <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
     </bpmn2:startEvent>
-    
+
     <!-- Credit Check -->
-    <bpmn2:scriptTask id="ScriptTask_1" name="Credit Check" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_1" name="Credit Check" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
-      <bpmn2:script>
-        // Simulate credit bureau check
-        // In real scenario, this would call external service
-        
-        // Credit score already provided as input
-        // Determine if manual review needed
-        var lowScore = creditScore < 650;
-        var highLimit = requestedLimit > 2000000; // Over $20,000
-        var incomeRatio = (requestedLimit / annualIncome) > 0.3;
-        
-        requiresUnderwriterReview = lowScore || highLimit || incomeRatio;
-        
-        kcontext.setVariable("requiresUnderwriterReview", requiresUnderwriterReview);
-        kcontext.setVariable("statusCode", "CREDIT_CHECKED");
-      </bpmn2:script>
+      <bpmn2:script>boolean lowScore = creditScore &lt; 650;
+boolean highLimit = requestedLimit > 2000000;
+boolean highIncomeRatio = ((double) requestedLimit / annualIncome) > 0.3;
+boolean reviewFlag = lowScore || highLimit || highIncomeRatio;
+kcontext.setVariable("requiresUnderwriterReview", reviewFlag);
+kcontext.setVariable("statusCode", "CREDIT_CHECKED");</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- Decision Gateway -->
     <bpmn2:exclusiveGateway id="Gateway_1" name="Needs Review?" gatewayDirection="Diverging">
       <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
       <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-    
+
     <!-- Underwriter Review -->
-    <bpmn2:userTask id="UserTask_1" name="Underwriter Review">
+    <bpmn2:userTask id="UserTask_1" name="Underwriter Review" drools:taskName="Underwriter Review">
       <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
       <bpmn2:ioSpecification>
-        <bpmn2:dataInput id="DataInput_1" name="TaskName"/>
-        <bpmn2:dataInput id="DataInput_2" name="GroupId"/>
-        <bpmn2:dataOutput id="DataOutput_1" name="approved"/>
-        <bpmn2:dataOutput id="DataOutput_2" name="approvedLimit"/>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="approved" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_2" name="approvedLimit" drools:dtype="Object"/>
         <bpmn2:inputSet>
           <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
           <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
@@ -96,42 +93,33 @@
         <bpmn2:targetRef>approvedLimit</bpmn2:targetRef>
       </bpmn2:dataOutputAssociation>
     </bpmn2:userTask>
-    
+
     <!-- Auto Approval -->
-    <bpmn2:scriptTask id="ScriptTask_2" name="Auto Approve" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_2" name="Auto Approve" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
-      <bpmn2:script>
-        // Auto-approve based on credit score
-        isApproved = creditScore >= 700;
-        
-        if (isApproved) {
-            approvedLimit = requestedLimit;
-        } else {
-            approvedLimit = 0;
-        }
-        
-        kcontext.setVariable("isApproved", isApproved);
-        kcontext.setVariable("approvedLimit", approvedLimit);
-        kcontext.setVariable("statusCode", "AUTO_APPROVED");
-      </bpmn2:script>
+      <bpmn2:script>boolean approved = creditScore >= 700;
+int newLimit = approved ? requestedLimit : 0;
+kcontext.setVariable("isApproved", approved);
+kcontext.setVariable("approvedLimit", newLimit);
+kcontext.setVariable("statusCode", "AUTO_APPROVED");</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- Merge Gateway -->
     <bpmn2:exclusiveGateway id="Gateway_2" name="Merge" gatewayDirection="Converging">
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
       <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-    
+
     <!-- Manager Approval for High Limits -->
-    <bpmn2:userTask id="UserTask_2" name="Manager Approval">
+    <bpmn2:userTask id="UserTask_2" name="Manager Approval" drools:taskName="Manager Approval">
       <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
       <bpmn2:ioSpecification>
-        <bpmn2:dataInput id="DataInput_3" name="TaskName"/>
-        <bpmn2:dataInput id="DataInput_4" name="GroupId"/>
-        <bpmn2:dataOutput id="DataOutput_3" name="finalApproval"/>
+        <bpmn2:dataInput id="DataInput_3" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_4" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_3" name="finalApproval" drools:dtype="Object"/>
         <bpmn2:inputSet>
           <bpmn2:dataInputRefs>DataInput_3</bpmn2:dataInputRefs>
           <bpmn2:dataInputRefs>DataInput_4</bpmn2:dataInputRefs>
@@ -155,50 +143,45 @@
         </bpmn2:assignment>
       </bpmn2:dataInputAssociation>
     </bpmn2:userTask>
-    
+
     <!-- Issue Card -->
-    <bpmn2:scriptTask id="ScriptTask_3" name="Issue Card" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_3" name="Issue Card" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_9</bpmn2:outgoing>
-      <bpmn2:script>
-        // Generate application ID
-        var timestamp = java.lang.System.currentTimeMillis();
-        applicationId = "CC-" + customerId + "-" + timestamp;
-        
-        kcontext.setVariable("applicationId", applicationId);
-        kcontext.setVariable("statusCode", isApproved ? "ISSUED" : "DECLINED");
-        
-        java.lang.System.out.println("Credit card application: " + applicationId + " - " + (isApproved ? "Approved" : "Declined"));
-      </bpmn2:script>
+      <bpmn2:script>long timestamp = System.currentTimeMillis();
+String newAppId = "CC-" + customerId + "-" + timestamp;
+kcontext.setVariable("applicationId", newAppId);
+kcontext.setVariable("statusCode", Boolean.TRUE.equals(isApproved) ? "ISSUED" : "DECLINED");
+System.out.println("Credit card application: " + newAppId + " - " + (Boolean.TRUE.equals(isApproved) ? "Approved" : "Declined"));</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- End Event -->
     <bpmn2:endEvent id="EndEvent_1" name="Application Complete">
       <bpmn2:incoming>SequenceFlow_9</bpmn2:incoming>
     </bpmn2:endEvent>
-    
+
     <!-- Sequence Flows -->
     <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
     <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="Gateway_1"/>
     <bpmn2:sequenceFlow id="SequenceFlow_3" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresUnderwriterReview == true;</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresUnderwriterReview;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
     <bpmn2:sequenceFlow id="SequenceFlow_4" name="No" sourceRef="Gateway_1" targetRef="ScriptTask_2">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresUnderwriterReview == false;</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresUnderwriterReview;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
     <bpmn2:sequenceFlow id="SequenceFlow_5" sourceRef="UserTask_1" targetRef="Gateway_2"/>
     <bpmn2:sequenceFlow id="SequenceFlow_6" sourceRef="ScriptTask_2" targetRef="Gateway_2"/>
     <bpmn2:sequenceFlow id="SequenceFlow_7" sourceRef="Gateway_2" targetRef="UserTask_2"/>
     <bpmn2:sequenceFlow id="SequenceFlow_8" sourceRef="UserTask_2" targetRef="ScriptTask_3"/>
     <bpmn2:sequenceFlow id="SequenceFlow_9" sourceRef="ScriptTask_3" targetRef="EndEvent_1"/>
-    
+
   </bpmn2:process>
-  
+
   <!-- Item Definitions -->
-  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="String"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="Integer"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="Boolean"/>
-  
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="java.lang.String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="java.lang.Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="java.lang.Boolean"/>
+
   <!-- Diagram -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="credit-card-application">
@@ -269,7 +252,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  
-</bpmn2:definitions>
 
-<!-- Made with Bob -->
+</bpmn2:definitions>

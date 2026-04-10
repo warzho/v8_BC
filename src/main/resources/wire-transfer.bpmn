@@ -1,66 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" 
-                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
-                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
-                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
-                   xmlns:tns="http://www.jboss.org/drools"
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:drools="http://www.jboss.org/drools"
                    id="Definition"
                    targetNamespace="http://www.jboss.org/drools">
-  
-  <bpmn2:process id="wire-transfer" name="Wire Transfer" isExecutable="true" processType="Public">
-    
+
+  <bpmn2:process id="wire-transfer"
+                 drools:packageName="com.ibm.bamoe.demo"
+                 drools:version="1.0.0"
+                 drools:adHoc="false"
+                 name="Wire Transfer"
+                 isExecutable="true"
+                 processType="Public">
+
     <!-- Process Variables -->
-    <bpmn2:property id="transactionId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="fromAccountId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="toAccountId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="amountInCents" itemSubjectRef="ItemDefinition_Integer"/>
-    <bpmn2:property id="currency" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="requestTimestamp" itemSubjectRef="ItemDefinition_Long"/>
-    <bpmn2:property id="isFraudulent" itemSubjectRef="ItemDefinition_Boolean"/>
-    <bpmn2:property id="requiresReview" itemSubjectRef="ItemDefinition_Boolean"/>
-    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String"/>
-    
+    <bpmn2:property id="transactionId" itemSubjectRef="ItemDefinition_String" name="transactionId"/>
+    <bpmn2:property id="fromAccountId" itemSubjectRef="ItemDefinition_String" name="fromAccountId"/>
+    <bpmn2:property id="toAccountId" itemSubjectRef="ItemDefinition_String" name="toAccountId"/>
+    <bpmn2:property id="amountInCents" itemSubjectRef="ItemDefinition_Integer" name="amountInCents"/>
+    <bpmn2:property id="currency" itemSubjectRef="ItemDefinition_String" name="currency"/>
+    <bpmn2:property id="requestTimestamp" itemSubjectRef="ItemDefinition_Long" name="requestTimestamp"/>
+    <bpmn2:property id="isFraudulent" itemSubjectRef="ItemDefinition_Boolean" name="isFraudulent"/>
+    <bpmn2:property id="requiresReview" itemSubjectRef="ItemDefinition_Boolean" name="requiresReview"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String" name="statusCode"/>
+
     <!-- Start Event -->
     <bpmn2:startEvent id="StartEvent_1" name="Transfer Request">
       <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
     </bpmn2:startEvent>
-    
+
     <!-- Fraud Screening -->
-    <bpmn2:scriptTask id="ScriptTask_1" name="Fraud Screening" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_1" name="Fraud Screening" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
-      <bpmn2:script>
-        // Simple fraud rules
-        var highValue = amountInCents > 1000000; // Over $10,000
-        var rapidTransaction = (java.lang.System.currentTimeMillis() - requestTimestamp) < 60000; // Within 1 min
-        
-        // Flag as potentially fraudulent
-        isFraudulent = highValue && rapidTransaction;
-        requiresReview = isFraudulent || amountInCents > 5000000; // Over $50,000
-        
-        kcontext.setVariable("isFraudulent", isFraudulent);
-        kcontext.setVariable("requiresReview", requiresReview);
-        kcontext.setVariable("statusCode", "SCREENED");
-      </bpmn2:script>
+      <bpmn2:script>boolean highValue = amountInCents > 1000000;
+boolean rapidTransaction = (System.currentTimeMillis() - requestTimestamp) &lt; 60000;
+boolean fraudFlag = highValue &amp;&amp; rapidTransaction;
+boolean reviewFlag = fraudFlag || amountInCents > 5000000;
+kcontext.setVariable("isFraudulent", fraudFlag);
+kcontext.setVariable("requiresReview", reviewFlag);
+kcontext.setVariable("statusCode", "SCREENED");</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- Check if Review Needed -->
     <bpmn2:exclusiveGateway id="Gateway_1" name="Requires Review?" gatewayDirection="Diverging">
       <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
       <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-    
+
     <!-- Manual Review Task -->
-    <bpmn2:userTask id="UserTask_1" name="Fraud Review">
+    <bpmn2:userTask id="UserTask_1" name="Fraud Review" drools:taskName="Fraud Review">
       <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
       <bpmn2:ioSpecification>
-        <bpmn2:dataInput id="DataInput_1" name="TaskName"/>
-        <bpmn2:dataInput id="DataInput_2" name="GroupId"/>
-        <bpmn2:dataInput id="DataInput_3" name="Priority"/>
-        <bpmn2:dataOutput id="DataOutput_1" name="approved"/>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_3" name="Priority" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="approved" drools:dtype="Object"/>
         <bpmn2:inputSet>
           <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
           <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
@@ -92,49 +92,44 @@
         </bpmn2:assignment>
       </bpmn2:dataInputAssociation>
     </bpmn2:userTask>
-    
+
     <!-- Execute Transfer -->
-    <bpmn2:scriptTask id="ScriptTask_2" name="Execute Transfer" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_2" name="Execute Transfer" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
-      <bpmn2:script>
-        // Generate transaction ID
-        var timestamp = java.lang.System.currentTimeMillis();
-        transactionId = "TXN-" + fromAccountId + "-" + timestamp;
-        
-        kcontext.setVariable("transactionId", transactionId);
-        kcontext.setVariable("statusCode", "COMPLETED");
-        
-        java.lang.System.out.println("Wire transfer executed: " + transactionId);
-      </bpmn2:script>
+      <bpmn2:script>long timestamp = System.currentTimeMillis();
+String newTxnId = "TXN-" + fromAccountId + "-" + timestamp;
+kcontext.setVariable("transactionId", newTxnId);
+kcontext.setVariable("statusCode", "COMPLETED");
+System.out.println("Wire transfer executed: " + newTxnId);</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- End Event -->
     <bpmn2:endEvent id="EndEvent_1" name="Transfer Complete">
       <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
     </bpmn2:endEvent>
-    
+
     <!-- Sequence Flows -->
     <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
     <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="Gateway_1"/>
     <bpmn2:sequenceFlow id="SequenceFlow_3" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresReview == true;</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresReview;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
     <bpmn2:sequenceFlow id="SequenceFlow_4" name="No" sourceRef="Gateway_1" targetRef="ScriptTask_2">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresReview == false;</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresReview;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
     <bpmn2:sequenceFlow id="SequenceFlow_5" sourceRef="UserTask_1" targetRef="ScriptTask_2"/>
     <bpmn2:sequenceFlow id="SequenceFlow_6" sourceRef="ScriptTask_2" targetRef="EndEvent_1"/>
-    
+
   </bpmn2:process>
-  
+
   <!-- Item Definitions -->
-  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="String"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="Integer"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="Boolean"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Long" structureRef="Long"/>
-  
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="java.lang.String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="java.lang.Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="java.lang.Boolean"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Long" structureRef="java.lang.Long"/>
+
   <!-- Diagram -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="wire-transfer">
@@ -183,7 +178,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  
-</bpmn2:definitions>
 
-<!-- Made with Bob -->
+</bpmn2:definitions>

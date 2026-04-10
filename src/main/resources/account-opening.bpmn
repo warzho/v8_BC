@@ -1,70 +1,66 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" 
-                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
-                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
-                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI" 
-                   xmlns:tns="http://www.jboss.org/drools"
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:drools="http://www.jboss.org/drools"
                    id="Definition"
                    targetNamespace="http://www.jboss.org/drools">
-  
-  <bpmn2:process id="account-opening" name="Account Opening" isExecutable="true" processType="Public">
-    
+
+  <bpmn2:process id="account-opening"
+                 drools:packageName="com.ibm.bamoe.demo"
+                 drools:version="1.0.0"
+                 drools:adHoc="false"
+                 name="Account Opening"
+                 isExecutable="true"
+                 processType="Public">
+
     <!-- Process Variables -->
-    <bpmn2:property id="customerId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="accountType" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="initialDeposit" itemSubjectRef="ItemDefinition_Integer"/>
-    <bpmn2:property id="branchCode" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="employeeId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="requiresManagerApproval" itemSubjectRef="ItemDefinition_Boolean"/>
-    <bpmn2:property id="accountId" itemSubjectRef="ItemDefinition_String"/>
-    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean"/>
-    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String"/>
-    
+    <bpmn2:property id="customerId" itemSubjectRef="ItemDefinition_String" name="customerId"/>
+    <bpmn2:property id="accountType" itemSubjectRef="ItemDefinition_String" name="accountType"/>
+    <bpmn2:property id="initialDeposit" itemSubjectRef="ItemDefinition_Integer" name="initialDeposit"/>
+    <bpmn2:property id="branchCode" itemSubjectRef="ItemDefinition_String" name="branchCode"/>
+    <bpmn2:property id="employeeId" itemSubjectRef="ItemDefinition_String" name="employeeId"/>
+    <bpmn2:property id="requiresManagerApproval" itemSubjectRef="ItemDefinition_Boolean" name="requiresManagerApproval"/>
+    <bpmn2:property id="accountId" itemSubjectRef="ItemDefinition_String" name="accountId"/>
+    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean" name="isApproved"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String" name="statusCode"/>
+
     <!-- Start Event -->
     <bpmn2:startEvent id="StartEvent_1" name="Account Request Received">
       <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
     </bpmn2:startEvent>
-    
+
     <!-- Validate Request -->
-    <bpmn2:scriptTask id="ScriptTask_1" name="Validate Request" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_1" name="Validate Request" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
-      <bpmn2:script>
-        // Validate customer ID format
-        var valid = customerId != null && customerId.length() > 0;
-        
-        // Check account type
-        valid = valid && (accountType == "CHECKING" || accountType == "SAVINGS" || accountType == "MONEY_MARKET");
-        
-        // Check initial deposit minimum
-        valid = valid && initialDeposit >= 2500; // $25.00 minimum
-        
-        // Set approval requirement based on deposit amount
-        requiresManagerApproval = initialDeposit > 1000000; // Over $10,000 requires approval
-        
-        kcontext.setVariable("requiresManagerApproval", requiresManagerApproval);
-        kcontext.setVariable("statusCode", valid ? "VALIDATED" : "INVALID");
-      </bpmn2:script>
+      <bpmn2:script>boolean valid = customerId != null &amp;&amp; customerId.length() > 0;
+valid = valid &amp;&amp; ("CHECKING".equals(accountType) || "SAVINGS".equals(accountType) || "MONEY_MARKET".equals(accountType));
+valid = valid &amp;&amp; initialDeposit >= 2500;
+boolean managerApprovalNeeded = initialDeposit > 1000000;
+kcontext.setVariable("requiresManagerApproval", managerApprovalNeeded);
+kcontext.setVariable("statusCode", valid ? "VALIDATED" : "INVALID");</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- Check if Manager Approval Needed -->
     <bpmn2:exclusiveGateway id="Gateway_1" name="Requires Approval?" gatewayDirection="Diverging">
       <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
       <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
     </bpmn2:exclusiveGateway>
-    
+
     <!-- Manager Approval Task -->
-    <bpmn2:userTask id="UserTask_1" name="Manager Approval">
+    <bpmn2:userTask id="UserTask_1" name="Manager Approval" drools:taskName="Manager Approval">
       <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
       <bpmn2:ioSpecification>
-        <bpmn2:dataInput id="DataInput_1" name="TaskName"/>
-        <bpmn2:dataInput id="DataInput_2" name="GroupId"/>
-        <bpmn2:dataInput id="DataInput_3" name="Priority"/>
-        <bpmn2:dataInput id="DataInput_4" name="Description"/>
-        <bpmn2:dataOutput id="DataOutput_1" name="approved"/>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_3" name="Priority" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_4" name="Description" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="approved" drools:dtype="Object"/>
         <bpmn2:inputSet>
           <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
           <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
@@ -108,49 +104,43 @@
         <bpmn2:targetRef>isApproved</bpmn2:targetRef>
       </bpmn2:dataOutputAssociation>
     </bpmn2:userTask>
-    
+
     <!-- Create Account -->
-    <bpmn2:scriptTask id="ScriptTask_2" name="Create Account" scriptFormat="javascript">
+    <bpmn2:scriptTask id="ScriptTask_2" name="Create Account" scriptFormat="http://www.java.com/java">
       <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
-      <bpmn2:script>
-        // Generate account ID
-        var timestamp = java.lang.System.currentTimeMillis();
-        var accountId = "ACC-" + customerId + "-" + timestamp;
-        
-        kcontext.setVariable("accountId", accountId);
-        kcontext.setVariable("statusCode", "CREATED");
-        
-        // Log account creation
-        java.lang.System.out.println("Account created: " + accountId + " for customer: " + customerId);
-      </bpmn2:script>
+      <bpmn2:script>long timestamp = System.currentTimeMillis();
+String newAccountId = "ACC-" + customerId + "-" + timestamp;
+kcontext.setVariable("accountId", newAccountId);
+kcontext.setVariable("statusCode", "CREATED");
+System.out.println("Account created: " + newAccountId + " for customer: " + customerId);</bpmn2:script>
     </bpmn2:scriptTask>
-    
+
     <!-- End Event -->
     <bpmn2:endEvent id="EndEvent_1" name="Account Opened">
       <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
     </bpmn2:endEvent>
-    
+
     <!-- Sequence Flows -->
     <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
     <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="Gateway_1"/>
     <bpmn2:sequenceFlow id="SequenceFlow_3" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresManagerApproval == true;</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresManagerApproval;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
     <bpmn2:sequenceFlow id="SequenceFlow_4" name="No" sourceRef="Gateway_1" targetRef="ScriptTask_2">
-      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression">return requiresManagerApproval == false;</bpmn2:conditionExpression>
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresManagerApproval;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
     <bpmn2:sequenceFlow id="SequenceFlow_5" sourceRef="UserTask_1" targetRef="ScriptTask_2"/>
     <bpmn2:sequenceFlow id="SequenceFlow_6" sourceRef="ScriptTask_2" targetRef="EndEvent_1"/>
-    
+
   </bpmn2:process>
-  
+
   <!-- Item Definitions -->
-  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="String"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="Integer"/>
-  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="Boolean"/>
-  
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="java.lang.String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="java.lang.Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="java.lang.Boolean"/>
+
   <!-- Diagram -->
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="account-opening">
@@ -199,7 +189,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  
-</bpmn2:definitions>
 
-<!-- Made with Bob -->
+</bpmn2:definitions>
