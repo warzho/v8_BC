@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:drools="http://www.jboss.org/drools"
+                   id="Definition"
+                   targetNamespace="http://www.jboss.org/drools">
+
+  <bpmn2:process id="regulatory-reporting"
+                 drools:packageName="com.ibm.bamoe.demo"
+                 drools:version="1.0.0"
+                 drools:adHoc="false"
+                 name="Regulatory Reporting"
+                 isExecutable="true"
+                 processType="Public">
+
+    <!-- Process Variables -->
+    <bpmn2:property id="reportId" itemSubjectRef="ItemDefinition_String" name="reportId"/>
+    <bpmn2:property id="reportType" itemSubjectRef="ItemDefinition_String" name="reportType"/>
+    <bpmn2:property id="reportingPeriodStart" itemSubjectRef="ItemDefinition_Long" name="reportingPeriodStart"/>
+    <bpmn2:property id="reportingPeriodEnd" itemSubjectRef="ItemDefinition_Long" name="reportingPeriodEnd"/>
+    <bpmn2:property id="transactionCount" itemSubjectRef="ItemDefinition_Integer" name="transactionCount"/>
+    <bpmn2:property id="totalAmount" itemSubjectRef="ItemDefinition_Integer" name="totalAmount"/>
+    <bpmn2:property id="requiresManagerReview" itemSubjectRef="ItemDefinition_Boolean" name="requiresManagerReview"/>
+    <bpmn2:property id="isSubmitted" itemSubjectRef="ItemDefinition_Boolean" name="isSubmitted"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String" name="statusCode"/>
+
+    <!-- Start Event -->
+    <bpmn2:startEvent id="StartEvent_1" name="Report Initiated">
+      <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+
+    <!-- Generate Report Data -->
+    <bpmn2:scriptTask id="ScriptTask_1" name="Generate Report Data" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+      <bpmn2:script>String id = "RPT-" + reportType + "-" + System.currentTimeMillis();
+kcontext.setVariable("reportId", id);
+kcontext.setVariable("statusCode", "DATA_GENERATED");
+System.out.println("Report data generated: " + id + " type: " + reportType);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Compile Transactions -->
+    <bpmn2:scriptTask id="ScriptTask_2" name="Compile Transactions" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
+      <bpmn2:script>boolean needsReview = transactionCount > 100 || totalAmount > 1000000000;
+kcontext.setVariable("requiresManagerReview", needsReview);
+kcontext.setVariable("statusCode", "TRANSACTIONS_COMPILED");
+System.out.println("Compiled " + transactionCount + " transactions totaling " + totalAmount + " cents. Manager review: " + needsReview);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Format Report -->
+    <bpmn2:scriptTask id="ScriptTask_3" name="Format Report" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
+      <bpmn2:script>kcontext.setVariable("statusCode", "REPORT_FORMATTED");
+System.out.println("Report " + reportId + " formatted for " + reportType + " submission");</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Gateway: Needs Manager Review? -->
+    <bpmn2:exclusiveGateway id="Gateway_1" name="Needs Manager Review?" gatewayDirection="Diverging">
+      <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Manager Review -->
+    <bpmn2:userTask id="UserTask_1" name="Manager Review" drools:taskName="Manager Review">
+      <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet/>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_1</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Regulatory Report Manager Review</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_1</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_2</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">managers</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_2</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Merge Gateway -->
+    <bpmn2:exclusiveGateway id="Gateway_2" name="Merge" gatewayDirection="Converging">
+      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Compliance Officer Approval -->
+    <bpmn2:userTask id="UserTask_2" name="Compliance Officer Approval" drools:taskName="Compliance Officer Approval">
+      <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_9</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_3" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_4" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="approved" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_3</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_4</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_1</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_3</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Compliance Officer Sign-off</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_3</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_4</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">compliance</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_4</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_1</bpmn2:sourceRef>
+        <bpmn2:targetRef>isSubmitted</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Submit to Regulator -->
+    <bpmn2:scriptTask id="ScriptTask_4" name="Submit to Regulator" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_9</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_10</bpmn2:outgoing>
+      <bpmn2:script>kcontext.setVariable("isSubmitted", true);
+kcontext.setVariable("statusCode", "SUBMITTED");
+System.out.println("Report " + reportId + " submitted to regulator");</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Archive Report -->
+    <bpmn2:scriptTask id="ScriptTask_5" name="Archive Report" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_10</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_11</bpmn2:outgoing>
+      <bpmn2:script>kcontext.setVariable("statusCode", "ARCHIVED");
+System.out.println("Report " + reportId + " archived successfully");</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- End Event -->
+    <bpmn2:endEvent id="EndEvent_1" name="Report Complete">
+      <bpmn2:incoming>SequenceFlow_11</bpmn2:incoming>
+    </bpmn2:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="ScriptTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_3" sourceRef="ScriptTask_2" targetRef="ScriptTask_3"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_4" sourceRef="ScriptTask_3" targetRef="Gateway_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_5" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresManagerReview;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_6" name="No" sourceRef="Gateway_1" targetRef="Gateway_2">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresManagerReview;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_7" sourceRef="UserTask_1" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_8" sourceRef="Gateway_2" targetRef="UserTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_9" sourceRef="UserTask_2" targetRef="ScriptTask_4"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_10" sourceRef="ScriptTask_4" targetRef="ScriptTask_5"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_11" sourceRef="ScriptTask_5" targetRef="EndEvent_1"/>
+
+  </bpmn2:process>
+
+  <!-- Item Definitions -->
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="java.lang.String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="java.lang.Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="java.lang.Boolean"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Long" structureRef="java.lang.Long"/>
+
+  <!-- Diagram -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="regulatory-reporting">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="100" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_1" bpmnElement="ScriptTask_1">
+        <dc:Bounds x="200" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_2" bpmnElement="ScriptTask_2">
+        <dc:Bounds x="360" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_3" bpmnElement="ScriptTask_3">
+        <dc:Bounds x="520" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_1" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <dc:Bounds x="690" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_1" bpmnElement="UserTask_1">
+        <dc:Bounds x="665" y="50" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_2" bpmnElement="Gateway_2" isMarkerVisible="true">
+        <dc:Bounds x="840" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_2" bpmnElement="UserTask_2">
+        <dc:Bounds x="960" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_4" bpmnElement="ScriptTask_4">
+        <dc:Bounds x="1120" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_5" bpmnElement="ScriptTask_5">
+        <dc:Bounds x="1280" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1450" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1">
+        <di:waypoint x="136" y="168"/>
+        <di:waypoint x="200" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2">
+        <di:waypoint x="300" y="168"/>
+        <di:waypoint x="360" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_3" bpmnElement="SequenceFlow_3">
+        <di:waypoint x="460" y="168"/>
+        <di:waypoint x="520" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4">
+        <di:waypoint x="620" y="168"/>
+        <di:waypoint x="690" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5">
+        <di:waypoint x="715" y="143"/>
+        <di:waypoint x="715" y="130"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6">
+        <di:waypoint x="740" y="168"/>
+        <di:waypoint x="840" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7">
+        <di:waypoint x="765" y="90"/>
+        <di:waypoint x="865" y="90"/>
+        <di:waypoint x="865" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_8" bpmnElement="SequenceFlow_8">
+        <di:waypoint x="890" y="168"/>
+        <di:waypoint x="960" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_9" bpmnElement="SequenceFlow_9">
+        <di:waypoint x="1060" y="168"/>
+        <di:waypoint x="1120" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_10" bpmnElement="SequenceFlow_10">
+        <di:waypoint x="1220" y="168"/>
+        <di:waypoint x="1280" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_11" bpmnElement="SequenceFlow_11">
+        <di:waypoint x="1380" y="168"/>
+        <di:waypoint x="1450" y="168"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn2:definitions>

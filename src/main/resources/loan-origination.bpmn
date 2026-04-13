@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:drools="http://www.jboss.org/drools"
+                   id="Definition"
+                   targetNamespace="http://www.jboss.org/drools">
+
+  <bpmn2:process id="loan-origination"
+                 drools:packageName="com.ibm.bamoe.demo"
+                 drools:version="1.0.0"
+                 drools:adHoc="false"
+                 name="Loan Origination"
+                 isExecutable="true"
+                 processType="Public">
+
+    <!-- Process Variables -->
+    <bpmn2:property id="loanId" itemSubjectRef="ItemDefinition_String" name="loanId"/>
+    <bpmn2:property id="customerId" itemSubjectRef="ItemDefinition_String" name="customerId"/>
+    <bpmn2:property id="loanAmount" itemSubjectRef="ItemDefinition_Integer" name="loanAmount"/>
+    <bpmn2:property id="loanTerm" itemSubjectRef="ItemDefinition_Integer" name="loanTerm"/>
+    <bpmn2:property id="interestRate" itemSubjectRef="ItemDefinition_Float" name="interestRate"/>
+    <bpmn2:property id="creditScore" itemSubjectRef="ItemDefinition_Integer" name="creditScore"/>
+    <bpmn2:property id="debtToIncome" itemSubjectRef="ItemDefinition_Float" name="debtToIncome"/>
+    <bpmn2:property id="employmentVerified" itemSubjectRef="ItemDefinition_Boolean" name="employmentVerified"/>
+    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean" name="isApproved"/>
+    <bpmn2:property id="requiresUnderwriting" itemSubjectRef="ItemDefinition_Boolean" name="requiresUnderwriting"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String" name="statusCode"/>
+
+    <!-- Start Event -->
+    <bpmn2:startEvent id="StartEvent_1" name="Application Received">
+      <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+
+    <!-- Validate Application -->
+    <bpmn2:scriptTask id="ScriptTask_1" name="Validate Application" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+      <bpmn2:script>String id = "LN-" + customerId + "-" + System.currentTimeMillis();
+kcontext.setVariable("loanId", id);
+kcontext.setVariable("statusCode", "VALIDATED");
+System.out.println("Loan application validated: " + id);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Credit Check -->
+    <bpmn2:scriptTask id="ScriptTask_2" name="Credit Check" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
+      <bpmn2:script>kcontext.setVariable("statusCode", "CREDIT_CHECKED");
+System.out.println("Credit check complete for " + customerId + " - score: " + creditScore);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Employment Verification -->
+    <bpmn2:scriptTask id="ScriptTask_3" name="Employment Verification" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
+      <bpmn2:script>boolean needsUnderwriting = creditScore &lt; 680 || loanAmount > 5000000 || debtToIncome > 0.43f;
+kcontext.setVariable("requiresUnderwriting", needsUnderwriting);
+kcontext.setVariable("statusCode", "EMPLOYMENT_VERIFIED");
+System.out.println("Employment verified: " + employmentVerified + ", requires underwriting: " + needsUnderwriting);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Gateway: Needs Underwriting? -->
+    <bpmn2:exclusiveGateway id="Gateway_1" name="Needs Underwriting?" gatewayDirection="Diverging">
+      <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Underwriter Review -->
+    <bpmn2:userTask id="UserTask_1" name="Underwriter Review" drools:taskName="Underwriter Review">
+      <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="approved" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_1</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_1</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Loan Underwriting</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_1</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_2</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">underwriters</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_2</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_1</bpmn2:sourceRef>
+        <bpmn2:targetRef>isApproved</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Auto Decision -->
+    <bpmn2:scriptTask id="ScriptTask_4" name="Auto Decision" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
+      <bpmn2:script>boolean approved = creditScore >= 750 &amp;&amp; debtToIncome &lt; 0.36f &amp;&amp; Boolean.TRUE.equals(employmentVerified);
+kcontext.setVariable("isApproved", approved);
+kcontext.setVariable("statusCode", approved ? "AUTO_APPROVED" : "AUTO_DECLINED");
+System.out.println("Auto decision: " + (approved ? "APPROVED" : "DECLINED"));</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Merge Gateway -->
+    <bpmn2:exclusiveGateway id="Gateway_2" name="Merge" gatewayDirection="Converging">
+      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_9</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Loan Officer Approval -->
+    <bpmn2:userTask id="UserTask_2" name="Loan Officer Approval" drools:taskName="Loan Officer Approval">
+      <bpmn2:incoming>SequenceFlow_9</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_10</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_3" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_4" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_2" name="finalApproval" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_3</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_4</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_2</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_3</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Loan Officer Final Review</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_3</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_4</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">officers</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_4</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_2</bpmn2:sourceRef>
+        <bpmn2:targetRef>isApproved</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Generate Loan Documents -->
+    <bpmn2:scriptTask id="ScriptTask_5" name="Generate Loan Documents" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_10</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_11</bpmn2:outgoing>
+      <bpmn2:script>kcontext.setVariable("statusCode", Boolean.TRUE.equals(isApproved) ? "DOCUMENTS_GENERATED" : "DECLINED");
+System.out.println("Loan " + loanId + " - " + (Boolean.TRUE.equals(isApproved) ? "Documents generated" : "Application declined"));</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- End Event -->
+    <bpmn2:endEvent id="EndEvent_1" name="Loan Complete">
+      <bpmn2:incoming>SequenceFlow_11</bpmn2:incoming>
+    </bpmn2:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="ScriptTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_3" sourceRef="ScriptTask_2" targetRef="ScriptTask_3"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_4" sourceRef="ScriptTask_3" targetRef="Gateway_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_5" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresUnderwriting;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_6" name="No" sourceRef="Gateway_1" targetRef="ScriptTask_4">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresUnderwriting;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_7" sourceRef="UserTask_1" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_8" sourceRef="ScriptTask_4" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_9" sourceRef="Gateway_2" targetRef="UserTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_10" sourceRef="UserTask_2" targetRef="ScriptTask_5"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_11" sourceRef="ScriptTask_5" targetRef="EndEvent_1"/>
+
+  </bpmn2:process>
+
+  <!-- Item Definitions -->
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="java.lang.String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="java.lang.Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="java.lang.Boolean"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Float" structureRef="java.lang.Float"/>
+
+  <!-- Diagram -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="loan-origination">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="100" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_1" bpmnElement="ScriptTask_1">
+        <dc:Bounds x="200" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_2" bpmnElement="ScriptTask_2">
+        <dc:Bounds x="360" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_3" bpmnElement="ScriptTask_3">
+        <dc:Bounds x="520" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_1" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <dc:Bounds x="690" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_1" bpmnElement="UserTask_1">
+        <dc:Bounds x="665" y="50" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_4" bpmnElement="ScriptTask_4">
+        <dc:Bounds x="665" y="250" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_2" bpmnElement="Gateway_2" isMarkerVisible="true">
+        <dc:Bounds x="840" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_2" bpmnElement="UserTask_2">
+        <dc:Bounds x="960" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_5" bpmnElement="ScriptTask_5">
+        <dc:Bounds x="1120" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="1290" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1">
+        <di:waypoint x="136" y="168"/>
+        <di:waypoint x="200" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2">
+        <di:waypoint x="300" y="168"/>
+        <di:waypoint x="360" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_3" bpmnElement="SequenceFlow_3">
+        <di:waypoint x="460" y="168"/>
+        <di:waypoint x="520" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4">
+        <di:waypoint x="620" y="168"/>
+        <di:waypoint x="690" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5">
+        <di:waypoint x="715" y="143"/>
+        <di:waypoint x="715" y="130"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6">
+        <di:waypoint x="715" y="193"/>
+        <di:waypoint x="715" y="250"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7">
+        <di:waypoint x="765" y="90"/>
+        <di:waypoint x="865" y="90"/>
+        <di:waypoint x="865" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_8" bpmnElement="SequenceFlow_8">
+        <di:waypoint x="765" y="290"/>
+        <di:waypoint x="865" y="290"/>
+        <di:waypoint x="865" y="193"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_9" bpmnElement="SequenceFlow_9">
+        <di:waypoint x="890" y="168"/>
+        <di:waypoint x="960" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_10" bpmnElement="SequenceFlow_10">
+        <di:waypoint x="1060" y="168"/>
+        <di:waypoint x="1120" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_11" bpmnElement="SequenceFlow_11">
+        <di:waypoint x="1220" y="168"/>
+        <di:waypoint x="1290" y="168"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn2:definitions>

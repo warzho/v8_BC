@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                   xmlns:drools="http://www.jboss.org/drools"
+                   id="Definition"
+                   targetNamespace="http://www.jboss.org/drools">
+
+  <bpmn2:process id="commercial-lending"
+                 drools:packageName="com.ibm.bamoe.demo"
+                 drools:version="1.0.0"
+                 drools:adHoc="false"
+                 name="Commercial Lending"
+                 isExecutable="true"
+                 processType="Public">
+
+    <!-- Process Variables -->
+    <bpmn2:property id="applicationId" itemSubjectRef="ItemDefinition_String" name="applicationId"/>
+    <bpmn2:property id="businessId" itemSubjectRef="ItemDefinition_String" name="businessId"/>
+    <bpmn2:property id="businessName" itemSubjectRef="ItemDefinition_String" name="businessName"/>
+    <bpmn2:property id="loanAmount" itemSubjectRef="ItemDefinition_Integer" name="loanAmount"/>
+    <bpmn2:property id="loanPurpose" itemSubjectRef="ItemDefinition_String" name="loanPurpose"/>
+    <bpmn2:property id="annualRevenue" itemSubjectRef="ItemDefinition_Integer" name="annualRevenue"/>
+    <bpmn2:property id="yearsInBusiness" itemSubjectRef="ItemDefinition_Integer" name="yearsInBusiness"/>
+    <bpmn2:property id="creditScore" itemSubjectRef="ItemDefinition_Integer" name="creditScore"/>
+    <bpmn2:property id="collateralValue" itemSubjectRef="ItemDefinition_Integer" name="collateralValue"/>
+    <bpmn2:property id="debtServiceCoverage" itemSubjectRef="ItemDefinition_Float" name="debtServiceCoverage"/>
+    <bpmn2:property id="requiresFinancialAnalysis" itemSubjectRef="ItemDefinition_Boolean" name="requiresFinancialAnalysis"/>
+    <bpmn2:property id="requiresCommitteeApproval" itemSubjectRef="ItemDefinition_Boolean" name="requiresCommitteeApproval"/>
+    <bpmn2:property id="requiresLegalReview" itemSubjectRef="ItemDefinition_Boolean" name="requiresLegalReview"/>
+    <bpmn2:property id="isApproved" itemSubjectRef="ItemDefinition_Boolean" name="isApproved"/>
+    <bpmn2:property id="approvedAmount" itemSubjectRef="ItemDefinition_Integer" name="approvedAmount"/>
+    <bpmn2:property id="statusCode" itemSubjectRef="ItemDefinition_String" name="statusCode"/>
+
+    <!-- Start Event -->
+    <bpmn2:startEvent id="StartEvent_1" name="Application Received">
+      <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+    </bpmn2:startEvent>
+
+    <!-- Initial Assessment -->
+    <bpmn2:scriptTask id="ScriptTask_1" name="Initial Assessment" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+      <bpmn2:script>String id = "CL-" + businessId + "-" + System.currentTimeMillis();
+kcontext.setVariable("applicationId", id);
+kcontext.setVariable("statusCode", "ASSESSED");
+System.out.println("Commercial lending application " + id + " for " + businessName + " - amount: " + loanAmount);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Credit Analysis -->
+    <bpmn2:scriptTask id="ScriptTask_2" name="Credit Analysis" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_3</bpmn2:outgoing>
+      <bpmn2:script>boolean needsFinancial = loanAmount > 50000000;
+boolean needsLegal = collateralValue > 100000000;
+kcontext.setVariable("requiresFinancialAnalysis", needsFinancial);
+kcontext.setVariable("requiresLegalReview", needsLegal);
+kcontext.setVariable("statusCode", "CREDIT_ANALYZED");
+System.out.println("Credit analysis - score: " + creditScore + ", financial analysis: " + needsFinancial + ", legal review: " + needsLegal);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Gateway: Needs Financial Analysis? -->
+    <bpmn2:exclusiveGateway id="Gateway_1" name="Needs Financial Analysis?" gatewayDirection="Diverging">
+      <bpmn2:incoming>SequenceFlow_3</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_4</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_5</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Financial Analyst Review -->
+    <bpmn2:userTask id="UserTask_1" name="Financial Analyst Review" drools:taskName="Financial Analyst Review">
+      <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_1" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_2" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_1</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_2</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet/>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_1</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Financial Analysis</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_1</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_2</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">analysts</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_2</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Merge Financial -->
+    <bpmn2:exclusiveGateway id="Gateway_2" name="Merge Financial" gatewayDirection="Converging">
+      <bpmn2:incoming>SequenceFlow_6</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Collateral Valuation -->
+    <bpmn2:userTask id="UserTask_2" name="Collateral Valuation" drools:taskName="Collateral Valuation">
+      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_8</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_3" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_4" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_1" name="collateralValue" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_3</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_4</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_1</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_3</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Collateral Valuation</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_3</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_4</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">appraisers</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_4</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_1</bpmn2:sourceRef>
+        <bpmn2:targetRef>collateralValue</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Calculate Ratios -->
+    <bpmn2:scriptTask id="ScriptTask_3" name="Calculate Ratios" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_8</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_9</bpmn2:outgoing>
+      <bpmn2:script>float dscr = ((float) annualRevenue * 0.15f) / ((float) loanAmount * 0.08f);
+kcontext.setVariable("debtServiceCoverage", dscr);
+boolean needsCommittee = loanAmount > 100000000 || dscr &lt; 1.25f;
+kcontext.setVariable("requiresCommitteeApproval", needsCommittee);
+kcontext.setVariable("statusCode", "RATIOS_CALCULATED");
+System.out.println("DSCR: " + dscr + ", committee required: " + needsCommittee);</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- Gateway: Needs Legal Review? -->
+    <bpmn2:exclusiveGateway id="Gateway_3" name="Needs Legal Review?" gatewayDirection="Diverging">
+      <bpmn2:incoming>SequenceFlow_9</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_10</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_11</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Legal Review -->
+    <bpmn2:userTask id="UserTask_3" name="Legal Review" drools:taskName="Legal Review">
+      <bpmn2:incoming>SequenceFlow_10</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_12</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_5" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_6" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_5</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_6</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet/>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_5</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Legal Review</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_5</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_6</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">legal</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_6</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Merge Legal -->
+    <bpmn2:exclusiveGateway id="Gateway_4" name="Merge Legal" gatewayDirection="Converging">
+      <bpmn2:incoming>SequenceFlow_12</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_11</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_13</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Senior Credit Officer -->
+    <bpmn2:userTask id="UserTask_4" name="Senior Credit Officer" drools:taskName="Senior Credit Officer">
+      <bpmn2:incoming>SequenceFlow_13</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_14</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_7" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_8" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_2" name="approved" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_3" name="approvedAmount" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_7</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_8</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_2</bpmn2:dataOutputRefs>
+          <bpmn2:dataOutputRefs>DataOutput_3</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_7</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Senior Credit Officer Review</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_7</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_8</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">senior-officers</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_8</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_2</bpmn2:sourceRef>
+        <bpmn2:targetRef>isApproved</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_3</bpmn2:sourceRef>
+        <bpmn2:targetRef>approvedAmount</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Gateway: Needs Committee? -->
+    <bpmn2:exclusiveGateway id="Gateway_5" name="Needs Committee?" gatewayDirection="Diverging">
+      <bpmn2:incoming>SequenceFlow_14</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_15</bpmn2:outgoing>
+      <bpmn2:outgoing>SequenceFlow_16</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Credit Committee -->
+    <bpmn2:userTask id="UserTask_5" name="Credit Committee" drools:taskName="Credit Committee">
+      <bpmn2:incoming>SequenceFlow_15</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_17</bpmn2:outgoing>
+      <bpmn2:ioSpecification>
+        <bpmn2:dataInput id="DataInput_9" name="TaskName" drools:dtype="Object"/>
+        <bpmn2:dataInput id="DataInput_10" name="GroupId" drools:dtype="Object"/>
+        <bpmn2:dataOutput id="DataOutput_4" name="finalApproval" drools:dtype="Object"/>
+        <bpmn2:inputSet>
+          <bpmn2:dataInputRefs>DataInput_9</bpmn2:dataInputRefs>
+          <bpmn2:dataInputRefs>DataInput_10</bpmn2:dataInputRefs>
+        </bpmn2:inputSet>
+        <bpmn2:outputSet>
+          <bpmn2:dataOutputRefs>DataOutput_4</bpmn2:dataOutputRefs>
+        </bpmn2:outputSet>
+      </bpmn2:ioSpecification>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_9</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">Credit Committee Decision</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_9</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataInputAssociation>
+        <bpmn2:targetRef>DataInput_10</bpmn2:targetRef>
+        <bpmn2:assignment>
+          <bpmn2:from xsi:type="bpmn2:tFormalExpression">credit-committee</bpmn2:from>
+          <bpmn2:to xsi:type="bpmn2:tFormalExpression">DataInput_10</bpmn2:to>
+        </bpmn2:assignment>
+      </bpmn2:dataInputAssociation>
+      <bpmn2:dataOutputAssociation>
+        <bpmn2:sourceRef>DataOutput_4</bpmn2:sourceRef>
+        <bpmn2:targetRef>isApproved</bpmn2:targetRef>
+      </bpmn2:dataOutputAssociation>
+    </bpmn2:userTask>
+
+    <!-- Merge Committee -->
+    <bpmn2:exclusiveGateway id="Gateway_6" name="Merge Committee" gatewayDirection="Converging">
+      <bpmn2:incoming>SequenceFlow_17</bpmn2:incoming>
+      <bpmn2:incoming>SequenceFlow_16</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_18</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Generate Loan Agreement -->
+    <bpmn2:scriptTask id="ScriptTask_4" name="Generate Loan Agreement" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_18</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_19</bpmn2:outgoing>
+      <bpmn2:script>kcontext.setVariable("statusCode", Boolean.TRUE.equals(isApproved) ? "AGREEMENT_GENERATED" : "DECLINED");
+System.out.println("Commercial loan " + applicationId + " for " + businessName + " - " + (Boolean.TRUE.equals(isApproved) ? "Approved: " + approvedAmount : "Declined"));</bpmn2:script>
+    </bpmn2:scriptTask>
+
+    <!-- End Event -->
+    <bpmn2:endEvent id="EndEvent_1" name="Lending Complete">
+      <bpmn2:incoming>SequenceFlow_19</bpmn2:incoming>
+    </bpmn2:endEvent>
+
+    <!-- Sequence Flows -->
+    <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="ScriptTask_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="ScriptTask_1" targetRef="ScriptTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_3" sourceRef="ScriptTask_2" targetRef="Gateway_1"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_4" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresFinancialAnalysis;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_5" name="No" sourceRef="Gateway_1" targetRef="Gateway_2">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresFinancialAnalysis;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_6" sourceRef="UserTask_1" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_7" sourceRef="Gateway_2" targetRef="UserTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_8" sourceRef="UserTask_2" targetRef="ScriptTask_3"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_9" sourceRef="ScriptTask_3" targetRef="Gateway_3"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_10" name="Yes" sourceRef="Gateway_3" targetRef="UserTask_3">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresLegalReview;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_11" name="No" sourceRef="Gateway_3" targetRef="Gateway_4">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresLegalReview;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_12" sourceRef="UserTask_3" targetRef="Gateway_4"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_13" sourceRef="Gateway_4" targetRef="UserTask_4"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_14" sourceRef="UserTask_4" targetRef="Gateway_5"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_15" name="Yes" sourceRef="Gateway_5" targetRef="UserTask_5">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresCommitteeApproval;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_16" name="No" sourceRef="Gateway_5" targetRef="Gateway_6">
+      <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresCommitteeApproval;</bpmn2:conditionExpression>
+    </bpmn2:sequenceFlow>
+    <bpmn2:sequenceFlow id="SequenceFlow_17" sourceRef="UserTask_5" targetRef="Gateway_6"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_18" sourceRef="Gateway_6" targetRef="ScriptTask_4"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_19" sourceRef="ScriptTask_4" targetRef="EndEvent_1"/>
+
+  </bpmn2:process>
+
+  <!-- Item Definitions -->
+  <bpmn2:itemDefinition id="ItemDefinition_String" structureRef="java.lang.String"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Integer" structureRef="java.lang.Integer"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Boolean" structureRef="java.lang.Boolean"/>
+  <bpmn2:itemDefinition id="ItemDefinition_Float" structureRef="java.lang.Float"/>
+
+  <!-- Diagram -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="commercial-lending">
+      <bpmndi:BPMNShape id="BPMNShape_StartEvent_1" bpmnElement="StartEvent_1">
+        <dc:Bounds x="100" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_1" bpmnElement="ScriptTask_1">
+        <dc:Bounds x="200" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_2" bpmnElement="ScriptTask_2">
+        <dc:Bounds x="360" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_1" bpmnElement="Gateway_1" isMarkerVisible="true">
+        <dc:Bounds x="530" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_1" bpmnElement="UserTask_1">
+        <dc:Bounds x="505" y="50" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_2" bpmnElement="Gateway_2" isMarkerVisible="true">
+        <dc:Bounds x="680" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_2" bpmnElement="UserTask_2">
+        <dc:Bounds x="800" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_3" bpmnElement="ScriptTask_3">
+        <dc:Bounds x="960" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_3" bpmnElement="Gateway_3" isMarkerVisible="true">
+        <dc:Bounds x="1130" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_3" bpmnElement="UserTask_3">
+        <dc:Bounds x="1105" y="50" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_4" bpmnElement="Gateway_4" isMarkerVisible="true">
+        <dc:Bounds x="1280" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_4" bpmnElement="UserTask_4">
+        <dc:Bounds x="1400" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_5" bpmnElement="Gateway_5" isMarkerVisible="true">
+        <dc:Bounds x="1570" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_UserTask_5" bpmnElement="UserTask_5">
+        <dc:Bounds x="1545" y="50" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_6" bpmnElement="Gateway_6" isMarkerVisible="true">
+        <dc:Bounds x="1720" y="143" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_ScriptTask_4" bpmnElement="ScriptTask_4">
+        <dc:Bounds x="1840" y="128" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_EndEvent_1" bpmnElement="EndEvent_1">
+        <dc:Bounds x="2010" y="150" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1">
+        <di:waypoint x="136" y="168"/>
+        <di:waypoint x="200" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_2" bpmnElement="SequenceFlow_2">
+        <di:waypoint x="300" y="168"/>
+        <di:waypoint x="360" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_3" bpmnElement="SequenceFlow_3">
+        <di:waypoint x="460" y="168"/>
+        <di:waypoint x="530" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_4" bpmnElement="SequenceFlow_4">
+        <di:waypoint x="555" y="143"/>
+        <di:waypoint x="555" y="130"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5">
+        <di:waypoint x="580" y="168"/>
+        <di:waypoint x="680" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6">
+        <di:waypoint x="605" y="90"/>
+        <di:waypoint x="705" y="90"/>
+        <di:waypoint x="705" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7">
+        <di:waypoint x="730" y="168"/>
+        <di:waypoint x="800" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_8" bpmnElement="SequenceFlow_8">
+        <di:waypoint x="900" y="168"/>
+        <di:waypoint x="960" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_9" bpmnElement="SequenceFlow_9">
+        <di:waypoint x="1060" y="168"/>
+        <di:waypoint x="1130" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_10" bpmnElement="SequenceFlow_10">
+        <di:waypoint x="1155" y="143"/>
+        <di:waypoint x="1155" y="130"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_11" bpmnElement="SequenceFlow_11">
+        <di:waypoint x="1180" y="168"/>
+        <di:waypoint x="1280" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_12" bpmnElement="SequenceFlow_12">
+        <di:waypoint x="1205" y="90"/>
+        <di:waypoint x="1305" y="90"/>
+        <di:waypoint x="1305" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_13" bpmnElement="SequenceFlow_13">
+        <di:waypoint x="1330" y="168"/>
+        <di:waypoint x="1400" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_14" bpmnElement="SequenceFlow_14">
+        <di:waypoint x="1500" y="168"/>
+        <di:waypoint x="1570" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_15" bpmnElement="SequenceFlow_15">
+        <di:waypoint x="1595" y="143"/>
+        <di:waypoint x="1595" y="130"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_16" bpmnElement="SequenceFlow_16">
+        <di:waypoint x="1620" y="168"/>
+        <di:waypoint x="1720" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_17" bpmnElement="SequenceFlow_17">
+        <di:waypoint x="1645" y="90"/>
+        <di:waypoint x="1745" y="90"/>
+        <di:waypoint x="1745" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_18" bpmnElement="SequenceFlow_18">
+        <di:waypoint x="1770" y="168"/>
+        <di:waypoint x="1840" y="168"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_19" bpmnElement="SequenceFlow_19">
+        <di:waypoint x="1940" y="168"/>
+        <di:waypoint x="2010" y="168"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn2:definitions>

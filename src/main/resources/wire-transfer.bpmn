@@ -93,10 +93,16 @@ kcontext.setVariable("statusCode", "SCREENED");</bpmn2:script>
       </bpmn2:dataInputAssociation>
     </bpmn2:userTask>
 
-    <!-- Execute Transfer -->
-    <bpmn2:scriptTask id="ScriptTask_2" name="Execute Transfer" scriptFormat="http://www.java.com/java">
+    <!-- Converging Gateway before Execute Transfer -->
+    <bpmn2:exclusiveGateway id="Gateway_2" name="Merge" gatewayDirection="Converging">
       <bpmn2:incoming>SequenceFlow_4</bpmn2:incoming>
       <bpmn2:incoming>SequenceFlow_5</bpmn2:incoming>
+      <bpmn2:outgoing>SequenceFlow_7</bpmn2:outgoing>
+    </bpmn2:exclusiveGateway>
+
+    <!-- Execute Transfer -->
+    <bpmn2:scriptTask id="ScriptTask_2" name="Execute Transfer" scriptFormat="http://www.java.com/java">
+      <bpmn2:incoming>SequenceFlow_7</bpmn2:incoming>
       <bpmn2:outgoing>SequenceFlow_6</bpmn2:outgoing>
       <bpmn2:script>long timestamp = System.currentTimeMillis();
 String newTxnId = "TXN-" + fromAccountId + "-" + timestamp;
@@ -116,10 +122,11 @@ System.out.println("Wire transfer executed: " + newTxnId);</bpmn2:script>
     <bpmn2:sequenceFlow id="SequenceFlow_3" name="Yes" sourceRef="Gateway_1" targetRef="UserTask_1">
       <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return requiresReview;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
-    <bpmn2:sequenceFlow id="SequenceFlow_4" name="No" sourceRef="Gateway_1" targetRef="ScriptTask_2">
+    <bpmn2:sequenceFlow id="SequenceFlow_4" name="No" sourceRef="Gateway_1" targetRef="Gateway_2">
       <bpmn2:conditionExpression xsi:type="bpmn2:tFormalExpression" language="http://www.java.com/java">return !requiresReview;</bpmn2:conditionExpression>
     </bpmn2:sequenceFlow>
-    <bpmn2:sequenceFlow id="SequenceFlow_5" sourceRef="UserTask_1" targetRef="ScriptTask_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_5" sourceRef="UserTask_1" targetRef="Gateway_2"/>
+    <bpmn2:sequenceFlow id="SequenceFlow_7" sourceRef="Gateway_2" targetRef="ScriptTask_2"/>
     <bpmn2:sequenceFlow id="SequenceFlow_6" sourceRef="ScriptTask_2" targetRef="EndEvent_1"/>
 
   </bpmn2:process>
@@ -145,11 +152,14 @@ System.out.println("Wire transfer executed: " + newTxnId);</bpmn2:script>
       <bpmndi:BPMNShape id="BPMNShape_UserTask_1" bpmnElement="UserTask_1">
         <dc:Bounds x="345" y="200" width="100" height="80"/>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_Gateway_2" bpmnElement="Gateway_2" isMarkerVisible="true">
+        <dc:Bounds x="500" y="93" width="50" height="50"/>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_ScriptTask_2" bpmnElement="ScriptTask_2">
-        <dc:Bounds x="500" y="78" width="100" height="80"/>
+        <dc:Bounds x="610" y="78" width="100" height="80"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_EndEvent_1" bpmnElement="EndEvent_1">
-        <dc:Bounds x="670" y="100" width="36" height="36"/>
+        <dc:Bounds x="780" y="100" width="36" height="36"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1">
         <di:waypoint x="136" y="118"/>
@@ -169,12 +179,16 @@ System.out.println("Wire transfer executed: " + newTxnId);</bpmn2:script>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_5" bpmnElement="SequenceFlow_5">
         <di:waypoint x="445" y="240"/>
-        <di:waypoint x="550" y="240"/>
-        <di:waypoint x="550" y="158"/>
+        <di:waypoint x="525" y="240"/>
+        <di:waypoint x="525" y="143"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_7" bpmnElement="SequenceFlow_7">
+        <di:waypoint x="550" y="118"/>
+        <di:waypoint x="610" y="118"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_6" bpmnElement="SequenceFlow_6">
-        <di:waypoint x="600" y="118"/>
-        <di:waypoint x="670" y="118"/>
+        <di:waypoint x="710" y="118"/>
+        <di:waypoint x="780" y="118"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
